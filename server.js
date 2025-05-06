@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
+const bodyParser = require("body-parser");
 
 dotenv.config();
 const app = express();
@@ -10,6 +11,7 @@ const app = express();
 // Middleware
 app.use(express.json()); // To parse JSON body
 app.use(cors()); // Allow cross-origin requests
+
 app.use("/api/auth", authRoutes);
 
 // Connect to MongoDB

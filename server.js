@@ -12,8 +12,6 @@ app.use(express.json()); // To parse JSON body
 app.use(cors()); // Allow cross-origin requests
 app.use("/api/auth", authRoutes);
 
-console.log("MongoDB URI:", process.env.MONGO_URI); // Debugging log
-
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI, {

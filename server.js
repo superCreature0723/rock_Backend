@@ -3,16 +3,18 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const authRoutes = require("./routes/auth");
-const bodyParser = require("body-parser");
+const roomRoutes = require("./routes/room");
 
 dotenv.config();
 const app = express();
 
 // Middleware
 app.use(express.json()); // To parse JSON body
-app.use(cors()); // Allow cross-origin requests
+app.use(cors({ origin: "http://localhost:3000" }));
 
 app.use("/api/auth", authRoutes);
+
+app.use("/api", roomRoutes);
 
 // Connect to MongoDB
 mongoose

@@ -2,14 +2,14 @@
 const mongoose = require("mongoose");
 
 const playerSchema = new mongoose.Schema({
-  playerId: String,
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   name: String,
   move: { type: String, default: "none" }, // Player's move (rock, paper, scissors)
   score: { type: Number, default: 0 }, // Player's score
 });
 
 const roomSchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, required: true, unique: true },
   status: { type: String, default: "waiting" }, // waiting, playing, finished
   maxPlayers: { type: Number, default: 2 },
   currentPlayers: { type: Number, default: 1 },

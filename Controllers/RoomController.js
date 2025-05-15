@@ -1,36 +1,57 @@
 // controllers/RoomController.js
 const Room = require("../models/Room");
+const User = require("../models/User");
 
 // Create a new room
 exports.createRoom = async (req, res) => {
-
- const { name, status, maxPlayers, currentPlayers, playerName } = req.body; 
+  let { name, maxPlayers, playerName } = req.body;
 
   if (!playerName) {
-    return res.status(400).json({ error: "Player name is required" }); // Check if playerName is provided
+    return res.status(400).json({ error: "Player name is required" });
   }
 
-  const newRoom = new Room({
-    name,
-    players: [
-      {
-        id: 1,
-        name: playerName,
-        userSelect: "none",
-        score: 0,
-      },
-    ],
-    maxPlayers,
-    currentPlayers: 1,
-    status: "waiting",
-  });
-  
-  console.log("Raptor Here:", newRoom);
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "Room name cannot be empty" });
+  }
+
+  name = name.trim();
 
   try {
+    if (!name) {
+      return res.status(400).json({ error: "Room name cannot be empty" });
+    }
+
+    const existingRoom = await Room.findOne({
+      name: new RegExp(`^${name}$`, "i"),
+    });
+    if (existingRoom) {
+      return res
+        .status(400)
+        .json({ error: "Room with this name already exists" });
+    }
+    // Find the user by playerName (you could also use email, or userId)
+    const user = await User.findOne({ username: playerName });
+
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
+    }
+
+    const newRoom = new Room({
+      name,
+      status: "waiting",
+      maxPlayers,
+      currentPlayers: 1,
+      players: [{ userId: user._id, name: playerName, move: "none", score: 0 }],
+    });
+
     await newRoom.save();
-    res.status(200).json({ roomId: newRoom._id });
+    res.status(200).json(newRoom); // Send the room data as the response
   } catch (err) {
+    if (err.code === 11000) {
+      return res
+        .status(400)
+        .json({ error: "Room with this name already exists" });
+    }
     res.status(500).json({ error: "Error creating room" });
   }
 };
@@ -45,23 +66,45 @@ exports.getRooms = async (req, res) => {
 exports.joinRoom = async (req, res) => {
   const { roomId, playerName } = req.body;
 
-  const room = await Room.findById(roomId);
-  if (
-    !room ||
-    room.status !== "waiting" ||
-    room.currentPlayers >= room.maxPlayers
-  ) {
-    return res.status(400).json({ error: "Room is full or not available" });
-  }
+  try {
+    // Find the user by playerName
+    const user = await User.findOne({ username: playerName });
 
-  room.players.push({ name: playerName });
-  room.currentPlayers += 1;
-  if (room.currentPlayers === room.maxPlayers) {
-    room.status = "playing"; // Game can start
-  }
+    if (!user) {
+      return res.status(400).json({ error: "User not found" });
+    }
 
-  await room.save();
-  res.status(200).json({ message: "Player joined the room", roomId: room._id });
+    // Find the room by roomId
+    const room = await Room.findOne({ name: roomId });
+    if (
+      !room ||
+      room.status !== "waiting" ||
+      room.currentPlayers >= room.maxPlayers
+    ) {
+      return res.status(400).json({ error: "Room is full or not available" });
+    }
+
+    // Add the player to the room
+    room.players.push({
+      userId: user._id,
+      name: playerName,
+      move: "none",
+      score: 0,
+    });
+    room.currentPlayers += 1;
+
+    // If the room is full, update the room status to "playing"
+    if (room.currentPlayers === room.maxPlayers) {
+      room.status = "playing";
+    }
+
+    await room.save();
+    res
+      .status(200)
+      .json({ message: "Player joined the room", roomId: room._id });
+  } catch (err) {
+    res.status(500).json({ error: "Error joining room" });
+  }
 };
 
 // Make a move
